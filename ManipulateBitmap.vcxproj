@@ -81,7 +81,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BaseDefines.h" />
+    <ClInclude Include="catch.hpp" />
     <ClInclude Include="MainWindow.h" />
+    <ClInclude Include="signals.h" />
     <ClInclude Include="Utf8String.h" />
   </ItemGroup>
   <ItemGroup>
