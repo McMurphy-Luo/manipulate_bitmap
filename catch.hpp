@@ -14826,7 +14826,7 @@ namespace Catch {
 
 namespace Detail {
 
-    const std::string unprintableString = "{?}";
+    const char unprintableString[4] = "{?}";
 
     namespace {
         const int hexThreshold = 255;

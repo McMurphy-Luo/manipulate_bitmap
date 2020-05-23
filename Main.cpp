@@ -6,6 +6,7 @@
 #include "MainWindow.h"
 
 using std::unique_ptr;
+using std::make_unique;
 using Gdiplus::GdiplusStartup;
 using Gdiplus::GdiplusShutdown;
 using Gdiplus::GdiplusStartupInput;
@@ -27,7 +28,7 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
   gdiplus_initialize_status = GdiplusStartup(&gdi_plus_token, &gdip_startup_input, nullptr);
   assert(gdiplus_initialize_status == Status::Ok);
 
-  unique_ptr<MainWindow> the_main_window(std::make_unique<MainWindow>("Hello World", instance));
+  unique_ptr<MainWindow> the_main_window(make_unique<MainWindow>("Hello World", instance));
   the_main_window->Show(show);
 
   MSG message;
@@ -35,7 +36,7 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
     TranslateMessage(&message);
     DispatchMessage(&message);
   }
-  the_main_window.release();
+  the_main_window.reset();
 
   GdiplusShutdown(gdi_plus_token);
   CoUninitialize();

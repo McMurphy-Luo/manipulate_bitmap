@@ -1,5 +1,5 @@
-#ifndef ZOOM_LOGO_MAIN_WINDOW_H_
-#define ZOOM_LOGO_MAIN_WINDOW_H_
+#ifndef MANIPULATE_BITMAP_MAIN_WINDOW_H_
+#define MANIPULATE_BITMAP_MAIN_WINDOW_H_
 
 #include "BaseDefine.h"
 #include <unordered_map>
@@ -36,4 +36,4 @@ private:
   std::unordered_map<UINT, signals::signal<std::pair<bool, LRESULT>, UINT, WPARAM, LPARAM>> signals_;
 };
 
-#endif // MAIN_WINDOW_H_
+#endif // MANIPULATE_BITMAP_MAIN_WINDOW_H_
