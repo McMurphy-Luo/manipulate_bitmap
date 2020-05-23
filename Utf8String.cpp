@@ -1,10 +1,8 @@
-#include "./Utf8String.h"
+#include "Utf8String.h"
 #include <cassert>
 #include <Windows.h>
 
 using std::wstring;
-
-NAMESPACE_BEGIN
 
 wstring Utf8StringToWString(const Utf8String& source)
 {
@@ -27,5 +25,3 @@ Utf8String WStringToUtf8String(const wstring& source)
   delete[] buffer;
   return result;
 }
-
-NAMESPACE_END

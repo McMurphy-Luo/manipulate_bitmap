@@ -1,13 +1,11 @@
-#include "./Define.h"
+#include "BaseDefine.h"
 #include <Windows.h>
 #include <tchar.h>
 #include <cassert>
 #include <gdiplus.h>
-#include "./MainWindow.h"
-#include "./ZoomLogo.h"
+#include "MainWindow.h"
 
-using zoom_logo::MainWindow;
-using zoom_logo::ZoomLogo;
+using std::unique_ptr;
 using Gdiplus::GdiplusStartup;
 using Gdiplus::GdiplusShutdown;
 using Gdiplus::GdiplusStartupInput;
@@ -15,6 +13,13 @@ using Gdiplus::GdiplusStartupOutput;
 using Gdiplus::Status;
 
 int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR command_line, int show) {
+  int flag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+  flag |= _CRTDBG_LEAK_CHECK_DF;
+  flag |= _CRTDBG_ALLOC_MEM_DF;
+  _CrtSetDbgFlag(flag);
+  _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+  _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+  _CrtSetBreakAlloc(-1);
   CoInitialize(nullptr);
   ULONG_PTR gdi_plus_token;
   Status gdiplus_initialize_status;
@@ -22,9 +27,7 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
   gdiplus_initialize_status = GdiplusStartup(&gdi_plus_token, &gdip_startup_input, nullptr);
   assert(gdiplus_initialize_status == Status::Ok);
 
-  MainWindow* the_main_window = new MainWindow("Hello World", instance);
-  ZoomLogo* zoom_logo = new ZoomLogo(the_main_window);
-
+  unique_ptr<MainWindow> the_main_window(std::make_unique<MainWindow>("Hello World", instance));
   the_main_window->Show(show);
 
   MSG message;
@@ -32,13 +35,9 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
     TranslateMessage(&message);
     DispatchMessage(&message);
   }
-  delete zoom_logo;
-  delete the_main_window;
+  the_main_window.release();
 
   GdiplusShutdown(gdi_plus_token);
   CoUninitialize();
-#ifdef _CRTDBG_MAP_ALLOC
-  _CrtDumpMemoryLeaks();
-#endif
 	return 0;
 }
