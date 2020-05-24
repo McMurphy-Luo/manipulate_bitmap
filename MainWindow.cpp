@@ -45,7 +45,7 @@ namespace
   {
     static WNDCLASSEX the_window_class;
     the_window_class.cbSize = sizeof(the_window_class);
-    the_window_class.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW | CS_DROPSHADOW;
+    the_window_class.style = CS_DBLCLKS;
     the_window_class.lpfnWndProc = WindowProc;
     the_window_class.cbClsExtra = 0;
     the_window_class.cbWndExtra = 0;

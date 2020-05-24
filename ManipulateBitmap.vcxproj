@@ -89,6 +89,7 @@
     <ClInclude Include="catch.hpp" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="MainWindowView.h" />
+    <ClInclude Include="ShadowWindow.h" />
     <ClInclude Include="signals.h" />
     <ClInclude Include="Utf8String.h" />
   </ItemGroup>
@@ -96,6 +97,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="MainWindowView.cpp" />
+    <ClCompile Include="ShadowWindow.cpp" />
     <ClCompile Include="Utf8String.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
