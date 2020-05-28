@@ -25,7 +25,7 @@ MainWindowView::MainWindowView(shared_ptr<MainWindow> the_main_window)
 
 pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_param) {
   PAINTSTRUCT paint_structure;
-  HDC paint_dc = BeginPaint(main_window_->WindowHandler(), &paint_structure);
+  HDC paint_dc = BeginPaint(main_window_->WindowHandle(), &paint_structure);
   {
     basic_stringstream<TCHAR> debug_stream;
     debug_stream << TEXT("paint_structure.fErase ") << paint_structure.fErase
@@ -41,6 +41,6 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
     }
     OutputDebugString(debug_stream.str().c_str());
   }
-  EndPaint(main_window_->WindowHandler(), &paint_structure);
+  EndPaint(main_window_->WindowHandle(), &paint_structure);
   return make_pair(true, 0);
 }

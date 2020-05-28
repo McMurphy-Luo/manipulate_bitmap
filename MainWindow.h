@@ -7,12 +7,14 @@
 #include "Utf8String.h"
 #include "signals.h"
 
-const char* const kMainWindowClass = u8"MainWindow.mcmurphy.luo";
+const char* const kMainWindowClass = u8"MainWindow.McMurphy.Luo";
 
 class MainWindow
 {
 public:
   MainWindow(const Utf8String& window_name, HINSTANCE module_handle);
+
+  ~MainWindow();
 
   MainWindow(const MainWindow&) = delete;
 
@@ -20,7 +22,7 @@ public:
 
   void Show(int show_flags);
 
-  HWND WindowHandler() const;
+  HWND WindowHandle() const;
 
   RECT ClientRectangle() const;
 
@@ -28,10 +30,10 @@ public:
 
   std::pair<bool, LRESULT> Trigger(UINT msg, WPARAM w_param, LPARAM l_param);
 
-  signals::connection Connect(UINT msg, std::function<std::pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handler);
+  signals::connection Connect(UINT msg, std::function<std::pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handle);
 
 private:
-  HWND window_handler_;
+  HWND window_handle_;
   MSG last_message_;
   std::unordered_map<UINT, signals::signal<std::pair<bool, LRESULT>, UINT, WPARAM, LPARAM>> signals_;
 };

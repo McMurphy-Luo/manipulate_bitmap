@@ -15,14 +15,14 @@ using signals::connection;
 
 namespace
 {
-  LRESULT CALLBACK WindowProc(HWND window_handler, UINT msg, WPARAM w_param, LPARAM l_param)
+  LRESULT CALLBACK WindowProc(HWND window_handle, UINT msg, WPARAM w_param, LPARAM l_param)
   {
     switch (msg) {
       case WM_CREATE:
       {
         CREATESTRUCT* p_create_struct = reinterpret_cast<CREATESTRUCT*>(l_param);
         MainWindow* p_created_wnd = reinterpret_cast<MainWindow*>(p_create_struct->lpCreateParams);
-        SetWindowLongPtr(window_handler, GWLP_USERDATA, (LONG_PTR)p_created_wnd);
+        SetWindowLongPtr(window_handle, GWLP_USERDATA, (LONG_PTR)p_created_wnd);
         return 0;
       }
       case WM_DESTROY:
@@ -31,19 +31,19 @@ namespace
         return 0;
       }
     }
-    MainWindow* theWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handler, GWLP_USERDATA));
+    MainWindow* theWindow = reinterpret_cast<MainWindow*>(GetWindowLongPtrW(window_handle, GWLP_USERDATA));
     if (theWindow) {
       pair<bool, LRESULT> message_handle_result = theWindow->Trigger(msg, w_param, l_param);
       if (message_handle_result.first) {
         return message_handle_result.second;
       }
     }
-    return DefWindowProc(window_handler, msg, w_param, l_param);
+    return DefWindowProc(window_handle, msg, w_param, l_param);
   }
 
   WNDCLASSEX MainWindowClass(HINSTANCE instance)
   {
-    static WNDCLASSEX the_window_class;
+    WNDCLASSEX the_window_class;
     the_window_class.cbSize = sizeof(the_window_class);
     the_window_class.style = CS_DBLCLKS;
     the_window_class.lpfnWndProc = WindowProc;
@@ -104,13 +104,13 @@ namespace
 }
 
 MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
-  : window_handler_(0)
+  : window_handle_(NULL)
   , last_message_()
   , signals_()
 {
   RegisterMainWindow(module_handle);
   wstring class_name = Utf8StringToWString(kMainWindowClass);
-  window_handler_ = CreateWindowEx(
+  window_handle_ = CreateWindowEx(
     WS_EX_OVERLAPPEDWINDOW,
     class_name.c_str(),
     Utf8StringToWString(window_name).c_str(),
@@ -128,18 +128,24 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
   TCHAR buffer[BUFSIZ];
   _itot_s(error_code, buffer, ARRAYSIZE(buffer), 10);
   OutputDebugString(buffer);
-  assert(IsWindow(window_handler_));
+  assert(IsWindow(window_handle_));
+}
+
+MainWindow::~MainWindow() {
+  if (::IsWindow(window_handle_)) {
+    DestroyWindow(window_handle_);
+  }
 }
 
 void MainWindow::Show(int show_flags)
 {
-  assert(IsWindow(window_handler_));
-  ShowWindow(window_handler_, show_flags);
+  assert(IsWindow(window_handle_));
+  ShowWindow(window_handle_, show_flags);
 }
 
-HWND MainWindow::WindowHandler() const
+HWND MainWindow::WindowHandle() const
 {
-  return window_handler_;
+  return window_handle_;
 }
 
 MSG MainWindow::LastMessage() const
@@ -161,17 +167,17 @@ pair<bool, LRESULT> MainWindow::Trigger(UINT msg, WPARAM w_param, LPARAM l_param
 RECT MainWindow::ClientRectangle() const
 {
   RECT result;
-  BOOL succeeded = GetClientRect(window_handler_, &result);
+  BOOL succeeded = GetClientRect(window_handle_, &result);
   assert(succeeded);
   return result;
 }
 
-connection MainWindow::Connect(UINT msg, function<pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handler)
+connection MainWindow::Connect(UINT msg, function<pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handle)
 {
   unordered_map<UINT, signal<pair<bool, LRESULT>, UINT, WPARAM, LPARAM>>::iterator it = signals_.find(msg);
   if (it == signals_.end()) {
     signal<pair<bool, LRESULT>, UINT, WPARAM, LPARAM> new_signal;
     it = signals_.emplace(msg, move(new_signal)).first;
   }
-  return it->second.connect(handler);
+  return it->second.connect(handle);
 }
