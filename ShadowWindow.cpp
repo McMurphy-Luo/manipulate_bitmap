@@ -1,9 +1,12 @@
 #include "ShadowWindow.h"
 #include <utility>
+#include "Utf8String.h"
 
 using std::pair;
 using std::function;
+using std::wstring;
 using std::make_pair;
+using std::unique_ptr;
 using signals::connection;
 
 namespace
@@ -14,7 +17,7 @@ namespace
     {
       CREATESTRUCT* p_create_struct = reinterpret_cast<CREATESTRUCT*>(l_param);
       ShadowWindow* p_created_wnd = reinterpret_cast<ShadowWindow*>(p_create_struct->lpCreateParams);
-      SetWindowLongPtr(window_handle, GWLP_USERDATA, (LONG_PTR)p_created_wnd);
+      SetWindowLongPtrW(window_handle, GWLP_USERDATA, (LONG_PTR)p_created_wnd);
       return 0;
     }
     case WM_DESTROY:
@@ -30,8 +33,7 @@ namespace
         return message_handle_result.second;
       }
     }
-    return DefWindowProc(window_handle, msg, w_param, l_param);
-
+    return DefWindowProcW(window_handle, msg, w_param, l_param);
   }
 
   WNDCLASSEX ShadowWindowClass(HINSTANCE instance)
@@ -55,7 +57,12 @@ namespace
     static bool is_shadow_window_class_registered = false;
     static ATOM register_result;
     WNDCLASSEX shadow_window_class = ShadowWindowClass(instance);
-
+    wstring class_name = Utf8StringToWString(kShadowWindowClass);
+    size_t buffer_size = class_name.size() + 1;
+    unique_ptr<TCHAR[]> buffer(new TCHAR[buffer_size + 1]);
+    memset(buffer.get(), 0, sizeof(TCHAR) * buffer_size);
+    _tcscpy_s(buffer.get(), buffer_size, class_name.c_str());
+    shadow_window_class.lpszClassName = buffer.get();
     return register_result;
   }
 }

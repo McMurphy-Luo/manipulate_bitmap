@@ -8,6 +8,7 @@ using std::function;
 using std::mem_fn;
 using std::placeholders::_1;
 using std::pair;
+using std::unique_ptr;
 using std::make_pair;
 using std::unordered_map;
 using signals::signal;
@@ -64,8 +65,12 @@ namespace
     if (!is_class_registered) {
       WNDCLASSEX main_window_class = MainWindowClass(module_handle);
       wstring class_name = Utf8StringToWString(kMainWindowClass);
-      main_window_class.lpszClassName = class_name.c_str();
-      register_result = RegisterClassEx(&main_window_class);
+      size_t buffer_size = class_name.size() + 1;
+      unique_ptr<TCHAR[]> buffer(new TCHAR[buffer_size]);
+      memset(buffer.get(), 0, sizeof(TCHAR) * buffer_size);
+      _tcscpy_s(buffer.get(), buffer_size, class_name.c_str());
+      main_window_class.lpszClassName = buffer.get();
+      register_result = RegisterClassExW(&main_window_class);
       assert(register_result);
       is_class_registered = true;
     }
@@ -110,7 +115,7 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
 {
   RegisterMainWindow(module_handle);
   wstring class_name = Utf8StringToWString(kMainWindowClass);
-  window_handle_ = CreateWindowEx(
+  window_handle_ = CreateWindowExW(
     WS_EX_OVERLAPPEDWINDOW,
     class_name.c_str(),
     Utf8StringToWString(window_name).c_str(),
