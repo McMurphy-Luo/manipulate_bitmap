@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include <cassert>
+#include <sstream>
 #include <iostream>
 
 using std::wstring;
@@ -8,6 +9,8 @@ using std::mem_fn;
 using std::placeholders::_1;
 using std::pair;
 using std::unique_ptr;
+using std::endl;
+using std::basic_stringstream;
 using std::make_pair;
 using std::unordered_map;
 using signals::signal;
@@ -121,10 +124,10 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
   unique_ptr<WCHAR[]> buffer_of_class_name = WStringToStringBuffer(Utf8StringToWString(kMainWindowClass));
   unique_ptr<WCHAR[]> buffer_of_window_name = WStringToStringBuffer(Utf8StringToWString(window_name));
   window_handle_ = CreateWindowExW(
-    WS_EX_OVERLAPPEDWINDOW,
+    WS_EX_LAYERED, //WS_EX_APPWINDOW,
     buffer_of_class_name.get(),
     buffer_of_window_name.get(),
-    WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+    0, // WS_OVERLAPPEDWINDOW,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
@@ -134,11 +137,12 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
     module_handle,
     this
   );
-  int error_code = GetLastError();
-  WCHAR buffer[BUFSIZ];
-  _itow_s(error_code, buffer, ARRAYSIZE(buffer), 10);
-  OutputDebugStringW(buffer);
-  assert(IsWindow(window_handle_));
+  if (!IsWindow(window_handle_)) {
+    basic_stringstream<WCHAR> debug_stream;
+    debug_stream << TEXT("GetLastError()") << GetLastError() << endl;
+    OutputDebugStringW(debug_stream.str().c_str());
+    assert(false);
+  }
 }
 
 MainWindow::~MainWindow() {

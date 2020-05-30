@@ -31,6 +31,11 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
 
   shared_ptr<MainWindow> the_main_window(make_shared<MainWindow>("Hello World", instance));
   shared_ptr<MainWindowView> the_main_window_view(make_shared<MainWindowView>(the_main_window));
+  
+
+  RECT main_window_client_rect = the_main_window->ClientRectangle();
+  // InvalidateRect(the_main_window->WindowHandle(), &main_window_client_rect, TRUE);
+  the_main_window_view->ReDraw();
   the_main_window->Show(show);
 
   MSG message;

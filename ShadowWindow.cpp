@@ -5,9 +5,12 @@
 using std::pair;
 using std::function;
 using std::wstring;
+using std::placeholders::_1;
+using std::unordered_map;
 using std::make_pair;
 using std::unique_ptr;
 using signals::connection;
+using signals::signal;
 
 namespace
 {
@@ -75,6 +78,36 @@ namespace
     is_shadow_window_class_registered = register_result != 0;
     return register_result;
   }
+
+  class WindowMessageSlotTriggerPolicy {
+  public:
+    WindowMessageSlotTriggerPolicy(UINT message, WPARAM w_param, LPARAM l_param)
+      : message_(message)
+      , w_param_(w_param)
+      , l_param_()
+      , handled_(false)
+      , result_(0) {
+
+    }
+
+    bool Trigger(function<pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> slot) {
+      pair<bool, LRESULT> result = slot(message_, w_param_, l_param_);
+      handled_ = result.first;
+      result_ = result.second;
+      return !handled_;
+    }
+
+    bool Handled() const { return handled_; }
+
+    LRESULT Result() const { return result_; }
+
+  private:
+    UINT message_;
+    WPARAM w_param_;
+    LPARAM l_param_;
+    bool handled_;
+    LRESULT result_;
+  };
 }
 
 ShadowWindow::ShadowWindow(const Utf8String& window_name, HINSTANCE module_handle)
@@ -82,6 +115,28 @@ ShadowWindow::ShadowWindow(const Utf8String& window_name, HINSTANCE module_handl
   RegisterShadowWindowClass(module_handle);
   unique_ptr<WCHAR[]> buffer_of_class_name = WStringToStringBuffer(Utf8StringToWString(kShadowWindowClass));
   unique_ptr<WCHAR[]> buffer_of_window_name = WStringToStringBuffer(Utf8StringToWString(window_name));
+  window_handle_ = CreateWindowExW(
+    WS_EX_LAYERED,
+    buffer_of_class_name.get(),
+    buffer_of_window_name.get(),
+    0,
+    CW_USEDEFAULT,
+    CW_USEDEFAULT,
+    CW_USEDEFAULT,
+    CW_USEDEFAULT,
+    nullptr,
+    nullptr,
+    module_handle,
+    this
+  );
+  assert(IsWindow(window_handle_));
+  if (!IsWindow(window_handle_)) {
+    int error_code = GetLastError();
+    WCHAR buffer[BUFSIZ];
+    _itow_s(error_code, buffer, ARRAYSIZE(buffer), 10);
+    OutputDebugStringW(buffer);
+    assert(false);
+  }
 }
 
 ShadowWindow::~ShadowWindow() {
@@ -91,9 +146,20 @@ ShadowWindow::~ShadowWindow() {
 }
 
 pair<bool, LRESULT> ShadowWindow::Trigger(UINT msg, WPARAM w_param, LPARAM l_param) {
-  return make_pair(false, 0);
+  unordered_map<UINT, signal<pair<bool, LRESULT>, UINT, WPARAM, LPARAM>>::iterator it = signals_.find(msg);
+  if (it != signals_.end()) {
+    WindowMessageSlotTriggerPolicy special_trigger(msg, w_param, l_param);
+    it->second(bind(mem_fn(&WindowMessageSlotTriggerPolicy::Trigger), &special_trigger, _1));
+    return make_pair<bool, LRESULT>(special_trigger.Handled(), special_trigger.Result());
+  }
+  return make_pair<bool, LRESULT>(false, 0);
 }
 
 connection ShadowWindow::Connect(UINT msg, function<pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handle) {
-  return connection();
+  unordered_map<UINT, signal<pair<bool, LRESULT>, UINT, WPARAM, LPARAM>>::iterator it = signals_.find(msg);
+  if (it == signals_.end()) {
+    signal<pair<bool, LRESULT>, UINT, WPARAM, LPARAM> new_signal;
+    it = signals_.emplace(msg, move(new_signal)).first;
+  }
+  return it->second.connect(handle);
 }
