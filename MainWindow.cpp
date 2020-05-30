@@ -1,6 +1,5 @@
 #include "MainWindow.h"
 #include <cassert>
-#include <tchar.h>
 #include <iostream>
 
 using std::wstring;
@@ -23,7 +22,7 @@ namespace
       {
         CREATESTRUCT* p_create_struct = reinterpret_cast<CREATESTRUCT*>(l_param);
         MainWindow* p_created_wnd = reinterpret_cast<MainWindow*>(p_create_struct->lpCreateParams);
-        SetWindowLongPtr(window_handle, GWLP_USERDATA, (LONG_PTR)p_created_wnd);
+        SetWindowLongPtrW(window_handle, GWLP_USERDATA, (LONG_PTR)p_created_wnd);
         return 0;
       }
       case WM_DESTROY:
@@ -39,12 +38,20 @@ namespace
         return message_handle_result.second;
       }
     }
-    return DefWindowProc(window_handle, msg, w_param, l_param);
+    return DefWindowProcW(window_handle, msg, w_param, l_param);
   }
 
-  WNDCLASSEX MainWindowClass(HINSTANCE instance)
+  unique_ptr<WCHAR[]> WStringToStringBuffer(const wstring& the_string) {
+    size_t buffer_size = the_string.size() + 1;
+    unique_ptr<WCHAR[]> buffer(new WCHAR[buffer_size]);
+    memset(buffer.get(), 0, sizeof(WCHAR) * buffer_size);
+    wcscpy_s(buffer.get(), buffer_size, the_string.c_str());
+    return buffer;
+  }
+
+  WNDCLASSEXW MainWindowClass(HINSTANCE instance)
   {
-    WNDCLASSEX the_window_class;
+    WNDCLASSEXW the_window_class;
     the_window_class.cbSize = sizeof(the_window_class);
     the_window_class.style = CS_DBLCLKS;
     the_window_class.lpfnWndProc = WindowProc;
@@ -62,18 +69,15 @@ namespace
   ATOM RegisterMainWindow(HINSTANCE module_handle) {
     static bool is_class_registered = false;
     static ATOM register_result;
-    if (!is_class_registered) {
-      WNDCLASSEX main_window_class = MainWindowClass(module_handle);
-      wstring class_name = Utf8StringToWString(kMainWindowClass);
-      size_t buffer_size = class_name.size() + 1;
-      unique_ptr<TCHAR[]> buffer(new TCHAR[buffer_size]);
-      memset(buffer.get(), 0, sizeof(TCHAR) * buffer_size);
-      _tcscpy_s(buffer.get(), buffer_size, class_name.c_str());
-      main_window_class.lpszClassName = buffer.get();
-      register_result = RegisterClassExW(&main_window_class);
-      assert(register_result);
-      is_class_registered = true;
+    if (is_class_registered) {
+      return register_result;
     }
+    WNDCLASSEXW main_window_class = MainWindowClass(module_handle);
+    unique_ptr<WCHAR[]> buffer = WStringToStringBuffer(Utf8StringToWString(kMainWindowClass));
+    main_window_class.lpszClassName = buffer.get();
+    register_result = RegisterClassExW(&main_window_class);
+    assert(register_result);
+    is_class_registered = register_result != 0;
     return register_result;
   }
 
@@ -114,11 +118,12 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
   , signals_()
 {
   RegisterMainWindow(module_handle);
-  wstring class_name = Utf8StringToWString(kMainWindowClass);
+  unique_ptr<WCHAR[]> buffer_of_class_name = WStringToStringBuffer(Utf8StringToWString(kMainWindowClass));
+  unique_ptr<WCHAR[]> buffer_of_window_name = WStringToStringBuffer(Utf8StringToWString(window_name));
   window_handle_ = CreateWindowExW(
     WS_EX_OVERLAPPEDWINDOW,
-    class_name.c_str(),
-    Utf8StringToWString(window_name).c_str(),
+    buffer_of_class_name.get(),
+    buffer_of_window_name.get(),
     WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
@@ -130,9 +135,9 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
     this
   );
   int error_code = GetLastError();
-  TCHAR buffer[BUFSIZ];
-  _itot_s(error_code, buffer, ARRAYSIZE(buffer), 10);
-  OutputDebugString(buffer);
+  WCHAR buffer[BUFSIZ];
+  _itow_s(error_code, buffer, ARRAYSIZE(buffer), 10);
+  OutputDebugStringW(buffer);
   assert(IsWindow(window_handle_));
 }
 

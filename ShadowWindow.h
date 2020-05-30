@@ -4,12 +4,13 @@
 #include "Windows.h"
 #include "tchar.h"
 #include "signals.h"
+#include "Utf8String.h"
 
 const char* const kShadowWindowClass = u8"ShadowWindow.McMurphy.Luo";
 
 class ShadowWindow {
 public:
-  ShadowWindow();
+  ShadowWindow(const Utf8String& window_name, HINSTANCE module_handle);
 
   ~ShadowWindow();
 

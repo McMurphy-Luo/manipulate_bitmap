@@ -36,9 +36,17 @@ namespace
     return DefWindowProcW(window_handle, msg, w_param, l_param);
   }
 
-  WNDCLASSEX ShadowWindowClass(HINSTANCE instance)
+  unique_ptr<WCHAR[]> WStringToStringBuffer(const wstring& the_string) {
+    size_t buffer_size = the_string.size() + 1;
+    unique_ptr<WCHAR[]> buffer(new WCHAR[buffer_size]);
+    memset(buffer.get(), 0, sizeof(WCHAR) * buffer_size);
+    wcscpy_s(buffer.get(), buffer_size, the_string.c_str());
+    return buffer;
+  }
+
+  WNDCLASSEXW ShadowWindowClass(HINSTANCE instance)
   {
-    WNDCLASSEX the_window_class;
+    WNDCLASSEXW the_window_class;
     the_window_class.cbSize = sizeof(the_window_class);
     the_window_class.style = 0;
     the_window_class.lpfnWndProc = ShadowWindowProc;
@@ -56,20 +64,24 @@ namespace
   ATOM RegisterShadowWindowClass(HINSTANCE instance) {
     static bool is_shadow_window_class_registered = false;
     static ATOM register_result;
-    WNDCLASSEX shadow_window_class = ShadowWindowClass(instance);
-    wstring class_name = Utf8StringToWString(kShadowWindowClass);
-    size_t buffer_size = class_name.size() + 1;
-    unique_ptr<TCHAR[]> buffer(new TCHAR[buffer_size + 1]);
-    memset(buffer.get(), 0, sizeof(TCHAR) * buffer_size);
-    _tcscpy_s(buffer.get(), buffer_size, class_name.c_str());
+    if (is_shadow_window_class_registered) {
+      return register_result;
+    }
+    WNDCLASSEXW shadow_window_class = ShadowWindowClass(instance);
+    unique_ptr<WCHAR[]> buffer = WStringToStringBuffer(Utf8StringToWString(kShadowWindowClass));
     shadow_window_class.lpszClassName = buffer.get();
+    register_result = RegisterClassExW(&shadow_window_class);
+    assert(register_result);
+    is_shadow_window_class_registered = register_result != 0;
     return register_result;
   }
 }
 
-ShadowWindow::ShadowWindow()
+ShadowWindow::ShadowWindow(const Utf8String& window_name, HINSTANCE module_handle)
   : window_handle_(NULL) {
-
+  RegisterShadowWindowClass(module_handle);
+  unique_ptr<WCHAR[]> buffer_of_class_name = WStringToStringBuffer(Utf8StringToWString(kShadowWindowClass));
+  unique_ptr<WCHAR[]> buffer_of_window_name = WStringToStringBuffer(Utf8StringToWString(window_name));
 }
 
 ShadowWindow::~ShadowWindow() {
