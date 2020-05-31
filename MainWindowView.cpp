@@ -105,42 +105,67 @@ void MainWindowView::ReDraw() {
     return;
   }
   RECT main_window_rect = main_window_->ClientRectangle();
-  HDC window_dc = GetWindowDC(main_window_->WindowHandle());
+  HDC window_dc = GetDC(main_window_->WindowHandle());
   HDC paint_dc = CreateCompatibleDC(window_dc);
   OutputDeviceCapabilities(window_dc);
   OutputDeviceCapabilities(paint_dc);
+  basic_stringstream<TCHAR> debug_stream;
 
-  HBITMAP bitmap = CreateCompatibleBitmap(paint_dc, main_window_rect.right - main_window_rect.left, main_window_rect.bottom - main_window_rect.top);
+  BITMAPINFO bitmap_info;
+  bitmap_info.bmiHeader.biSize = sizeof(bitmap_info);
+  bitmap_info.bmiHeader.biWidth = main_window_rect.right - main_window_rect.left;
+  bitmap_info.bmiHeader.biHeight = main_window_rect.top - main_window_rect.bottom;
+  bitmap_info.bmiHeader.biPlanes = 1;
+  bitmap_info.bmiHeader.biBitCount = 32;
+  bitmap_info.bmiHeader.biCompression = BI_RGB;
+  bitmap_info.bmiHeader.biSizeImage = 0;
+  bitmap_info.bmiHeader.biXPelsPerMeter = 0;
+  bitmap_info.bmiHeader.biYPelsPerMeter = 0;
+  bitmap_info.bmiHeader.biClrUsed = 0;
+  bitmap_info.bmiHeader.biClrImportant = 0;
 
+  DWORD* pointer_to_pixels = NULL;
+  HBITMAP bitmap = CreateDIBSection(paint_dc, &bitmap_info, DIB_RGB_COLORS, (void**)&pointer_to_pixels, NULL, 0);
   HGDIOBJ old_bitmap = SelectObject(paint_dc, bitmap);
 
-  basic_stringstream<TCHAR> debug_stream;
-  {
-    Graphics graphis(paint_dc);
 
-    Status gdiplus_function_status;
-    /*
-    Color bg_color(255, 255, 255, 255);
-    gdiplus_function_status = graphis.Clear(bg_color);
-    if (gdiplus_function_status != Status::Ok) {
-      debug_stream << TEXT("failed to clear the graphics status is ") << gdiplus_function_status << endl;
-      assert(false);
+
+  int result;
+
+  int x = 0;
+  int y = 0;
+
+  while (x < 40) {
+    while (y < 40) {
+      *(pointer_to_pixels + x * bitmap_info.bmiHeader.biWidth + y) = 0x0F120000;
+      ++y;
     }
-    */
-    Pen solid_color_pen(Color(0x23, 0x23, 0x23), 20);
-    RECT main_window_client_rect = main_window_->ClientRectangle();
-    Rect client_rect(
-      main_window_client_rect.left,
-      main_window_client_rect.top,
-      main_window_client_rect.right - main_window_client_rect.left - 1,
-      main_window_client_rect.bottom - main_window_client_rect.top - 1
-    );
-    gdiplus_function_status = graphis.DrawRectangle(&solid_color_pen, client_rect);
-    if (gdiplus_function_status != Status::Ok) {
-      debug_stream << TEXT("failed to draw rectangle status is ") << gdiplus_function_status << endl;
-      assert(false);
-    }
+    ++x;
+    y = 0;
   }
+
+  
+  /*
+  HPEN pen_of_solid_color = CreatePen(PS_SOLID, 20, RGB(23, 23, 23));
+  HBRUSH solid_color_brush = CreateSolidBrush(RGB(93, 99, 6));
+  HGDIOBJ old_pen = SelectObject(paint_dc, pen_of_solid_color);
+  POINT zero_p;
+  zero_p.x = 0;
+  zero_p.y = 0;
+  MoveToEx(paint_dc, 0, 0, &zero_p);
+  LineTo(paint_dc, main_window_rect.right - main_window_rect.left, 0);
+  int result = FillRect(paint_dc, &main_window_rect, solid_color_brush);
+  if (result == 0) {
+    debug_stream << TEXT("failed to update FillRect GetLastError() is ") << GetLastError() << endl;
+    assert(false);
+  }
+  SelectObject(paint_dc, old_pen);
+  DeleteObject(pen_of_solid_color);
+  DeleteObject(solid_color_brush);
+  */
+
+  
+  
   POINT location;
   location.x = main_window_rect.left;
   location.y = main_window_rect.top;
@@ -151,19 +176,19 @@ void MainWindowView::ReDraw() {
 
   blend_function.BlendOp = AC_SRC_OVER;
   blend_function.BlendFlags = 0;
-  blend_function.SourceConstantAlpha = 0xFF;
+  blend_function.SourceConstantAlpha = 255;
   blend_function.AlphaFormat = AC_SRC_ALPHA;
   POINT zero;
   zero.x = 0;
   zero.y = 0;
-  BOOL result = UpdateLayeredWindow(
+  result = UpdateLayeredWindow(
     main_window_->WindowHandle(),
     window_dc,
     &location,
     &client_rect_size,
     paint_dc,
     &zero, //&location,
-    RGB(0xFF, 0xFF, 0xFF),
+    0,
     &blend_function, //&blend_function,
     ULW_ALPHA
   );
