@@ -22,9 +22,15 @@ public:
 
   void Show(int show_flags);
 
-  HWND WindowHandle() const;
+  void InvalidRect(const RECT& rect, BOOL erase);
+
+  void InvalidRect(BOOL erase);
 
   RECT ClientRectangle() const;
+
+  RECT WindowRectangle() const;
+
+  HWND WindowHandle() const;
 
   MSG LastMessage() const;
 

@@ -28,16 +28,10 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
   GdiplusStartupInput gdip_startup_input;
   gdiplus_initialize_status = GdiplusStartup(&gdi_plus_token, &gdip_startup_input, nullptr);
   assert(gdiplus_initialize_status == Status::Ok);
-
   shared_ptr<MainWindow> the_main_window(make_shared<MainWindow>("Hello World", instance));
   shared_ptr<MainWindowView> the_main_window_view(make_shared<MainWindowView>(the_main_window));
-  
-
-  RECT main_window_client_rect = the_main_window->ClientRectangle();
-  // InvalidateRect(the_main_window->WindowHandle(), &main_window_client_rect, TRUE);
-  the_main_window_view->ReDraw();
-  the_main_window->Show(show);
-
+  the_main_window_view->InvalidRect(FALSE);
+  BOOL is_window = IsWindow(NULL);
   MSG message;
   while (GetMessage(&message, nullptr, 0, 0)) {
     TranslateMessage(&message);
@@ -45,7 +39,6 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
   }
   the_main_window_view.reset();
   the_main_window.reset();
-
   GdiplusShutdown(gdi_plus_token);
   CoUninitialize();
 	return 0;

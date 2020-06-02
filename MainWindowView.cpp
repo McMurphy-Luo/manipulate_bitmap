@@ -19,6 +19,7 @@ using Gdiplus::Status;
 using Gdiplus::Pen;
 using Gdiplus::Rect;
 using Gdiplus::Color;
+using Gdiplus::Bitmap;
 
 namespace
 {
@@ -95,26 +96,52 @@ MainWindowView::MainWindowView(shared_ptr<MainWindow> the_main_window)
     WM_PAINT,
     bind(mem_fn(&MainWindowView::OnPaint), this, _1, _2, _3)
   ))
-  , main_window_device_context_(NULL) {
-  
+{
 
 }
 
-void MainWindowView::ReDraw() {
+void MainWindowView::InvalidRect(const RECT& rect, BOOL erase) {
   if (!main_window_) {
+    assert(false);
     return;
   }
-  RECT main_window_rect = main_window_->ClientRectangle();
-  HDC window_dc = GetDC(main_window_->WindowHandle());
+  return main_window_->InvalidRect(rect, erase);
+}
+
+void MainWindowView::InvalidRect(BOOL erase) {
+  if (!main_window_) {
+    assert(false);
+    return;
+  }
+  return main_window_->InvalidRect(erase);
+}
+
+pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_param) {
+  if (!main_window_) {
+    return make_pair(true, 0);;
+  }
+  PAINTSTRUCT paint_structure;
+  HDC window_dc = BeginPaint(main_window_->WindowHandle(), &paint_structure);
+  basic_stringstream<TCHAR> debug_stream;
+  debug_stream << TEXT("paint_structure.fErase ") << paint_structure.fErase
+    << TEXT(" paint_structure.rcPaint ") << paint_structure.rcPaint.left
+    << TEXT(" ") << paint_structure.rcPaint.top
+    << TEXT(" ") << paint_structure.rcPaint.right
+    << TEXT(" ") << paint_structure.rcPaint.bottom
+    << endl;
   HDC paint_dc = CreateCompatibleDC(window_dc);
   OutputDeviceCapabilities(window_dc);
   OutputDeviceCapabilities(paint_dc);
-  basic_stringstream<TCHAR> debug_stream;
-
+  RECT window_rect = main_window_->WindowRectangle();
+  LONG window_width = window_rect.right - window_rect.left;
+  LONG window_height = window_rect.bottom - window_rect.top;
+  RECT client_rect = main_window_->ClientRectangle();
+  LONG client_width = client_rect.right - client_rect.left;
+  LONG client_height = client_rect.bottom - client_rect.top;
   BITMAPINFO bitmap_info;
   bitmap_info.bmiHeader.biSize = sizeof(bitmap_info);
-  bitmap_info.bmiHeader.biWidth = main_window_rect.right - main_window_rect.left;
-  bitmap_info.bmiHeader.biHeight = main_window_rect.top - main_window_rect.bottom;
+  bitmap_info.bmiHeader.biWidth = window_width;
+  bitmap_info.bmiHeader.biHeight = -window_height;
   bitmap_info.bmiHeader.biPlanes = 1;
   bitmap_info.bmiHeader.biBitCount = 32;
   bitmap_info.bmiHeader.biCompression = BI_RGB;
@@ -123,129 +150,69 @@ void MainWindowView::ReDraw() {
   bitmap_info.bmiHeader.biYPelsPerMeter = 0;
   bitmap_info.bmiHeader.biClrUsed = 0;
   bitmap_info.bmiHeader.biClrImportant = 0;
-
-  DWORD* pointer_to_pixels = NULL;
+  
+  BYTE* pointer_to_pixels = NULL;
   HBITMAP bitmap = CreateDIBSection(paint_dc, &bitmap_info, DIB_RGB_COLORS, (void**)&pointer_to_pixels, NULL, 0);
-  HGDIOBJ old_bitmap = SelectObject(paint_dc, bitmap);
-
-
-
-  int result;
-
-  int x = 0;
-  int y = 0;
-
-  while (x < 40) {
-    while (y < 40) {
-      *(pointer_to_pixels + x * bitmap_info.bmiHeader.biWidth + y) = 0x0F120000;
-      ++y;
-    }
-    ++x;
-    y = 0;
-  }
-
-  
-  /*
-  HPEN pen_of_solid_color = CreatePen(PS_SOLID, 20, RGB(23, 23, 23));
-  HBRUSH solid_color_brush = CreateSolidBrush(RGB(93, 99, 6));
-  HGDIOBJ old_pen = SelectObject(paint_dc, pen_of_solid_color);
-  POINT zero_p;
-  zero_p.x = 0;
-  zero_p.y = 0;
-  MoveToEx(paint_dc, 0, 0, &zero_p);
-  LineTo(paint_dc, main_window_rect.right - main_window_rect.left, 0);
-  int result = FillRect(paint_dc, &main_window_rect, solid_color_brush);
-  if (result == 0) {
-    debug_stream << TEXT("failed to update FillRect GetLastError() is ") << GetLastError() << endl;
-    assert(false);
-  }
-  SelectObject(paint_dc, old_pen);
-  DeleteObject(pen_of_solid_color);
-  DeleteObject(solid_color_brush);
-  */
-
-  
-  
-  POINT location;
-  location.x = main_window_rect.left;
-  location.y = main_window_rect.top;
-  SIZE client_rect_size;
-  client_rect_size.cx = main_window_rect.right - main_window_rect.left;
-  client_rect_size.cy = main_window_rect.bottom - main_window_rect.top;
-  BLENDFUNCTION blend_function;
-
-  blend_function.BlendOp = AC_SRC_OVER;
-  blend_function.BlendFlags = 0;
-  blend_function.SourceConstantAlpha = 255;
-  blend_function.AlphaFormat = AC_SRC_ALPHA;
-  POINT zero;
-  zero.x = 0;
-  zero.y = 0;
-  result = UpdateLayeredWindow(
-    main_window_->WindowHandle(),
-    window_dc,
-    &location,
-    &client_rect_size,
-    paint_dc,
-    &zero, //&location,
-    0,
-    &blend_function, //&blend_function,
-    ULW_ALPHA
-  );
-  if (result == 0) {
-    debug_stream << TEXT("failed to update main window GetLastError() is ") << GetLastError() << endl;
-    assert(false);
-  }
-  OutputDebugString(debug_stream.str().c_str());
-  
-  SelectObject(paint_dc, old_bitmap);
-  DeleteObject(bitmap);
-  DeleteDC(paint_dc);
-  ReleaseDC(main_window_->WindowHandle(), window_dc);
-}
-
-pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_param) {
-  PAINTSTRUCT paint_structure;
-  HDC paint_dc = BeginPaint(main_window_->WindowHandle(), &paint_structure);
-
-  
-
-  basic_stringstream<TCHAR> debug_stream;
-  debug_stream << TEXT("paint_structure.fErase ") << paint_structure.fErase
-    << TEXT(" paint_structure.rcPaint ") << paint_structure.rcPaint.left
-    << TEXT(" ") << paint_structure.rcPaint.top
-    << TEXT(" ") << paint_structure.rcPaint.right
-    << TEXT(" ") << paint_structure.rcPaint.bottom
-    << endl;
-
-  /*
   {
-    Graphics graphis(paint_dc);
-    Status gdiplus_function_status;
-
-    Color bg_color(255, 255, 255, 255);
-    gdiplus_function_status = graphis.Clear(bg_color);
+    Bitmap bitmap(
+      &bitmap_info,
+      pointer_to_pixels
+    );
+    Graphics graphics(&bitmap);
+    Status gdiplus_function_status = graphics.GetLastStatus();
     if (gdiplus_function_status != Status::Ok) {
-      debug_stream << TEXT("failed to clear the graphics status is ") << gdiplus_function_status << endl;
+      debug_stream << TEXT("failed to create the graphics object status is ") << gdiplus_function_status << endl;
       assert(false);
     }
-
+    Color bg_color(Color(0xFF, 0xFF, 0xFF));
+    graphics.Clear(bg_color);
     Pen solid_color_pen(Color(0x23, 0x23, 0x23), 20);
-    RECT main_window_client_rect = main_window_->ClientRectangle();
     Rect client_rect(
-      main_window_client_rect.left,
-      main_window_client_rect.top,
-      main_window_client_rect.right - main_window_client_rect.left - 1,
-      main_window_client_rect.bottom - main_window_client_rect.top - 1
+      0,
+      0,
+      window_width,
+      window_height
     );
-    gdiplus_function_status = graphis.DrawRectangle(&solid_color_pen, client_rect);
+    gdiplus_function_status = graphics.DrawRectangle(&solid_color_pen, client_rect);
     if (gdiplus_function_status != Status::Ok) {
       debug_stream << TEXT("failed to draw rectangle status is ") << gdiplus_function_status << endl;
       assert(false);
     }
   }
-  */
-
+  HGDIOBJ old_bitmap = SelectObject(paint_dc, bitmap);
+  UPDATELAYEREDWINDOWINFO layered_window_update_param;
+  BLENDFUNCTION blend_function;
+  blend_function.BlendOp = AC_SRC_OVER;
+  blend_function.BlendFlags = 0;
+  blend_function.SourceConstantAlpha = 255;
+  blend_function.AlphaFormat = AC_SRC_ALPHA;
+  SIZE size_of_window;
+  size_of_window.cx = window_width;
+  size_of_window.cy = window_height;
+  POINT position_of_window;
+  position_of_window.x = window_rect.left;
+  position_of_window.y = window_rect.top;
+  POINT zero;
+  zero.x = 0;
+  zero.y = 0;
+  layered_window_update_param.cbSize = sizeof(layered_window_update_param);
+  layered_window_update_param.hdcDst = window_dc;
+  layered_window_update_param.pptDst = NULL;
+  layered_window_update_param.psize = &size_of_window;
+  layered_window_update_param.hdcSrc = paint_dc;
+  layered_window_update_param.pptSrc = &zero;
+  layered_window_update_param.crKey = RGB(0xFF, 0xFF, 0xFF);
+  layered_window_update_param.pblend = &blend_function;
+  layered_window_update_param.dwFlags = ULW_ALPHA | ULW_EX_NORESIZE;
+  layered_window_update_param.prcDirty = NULL;
+  int result = UpdateLayeredWindowIndirect(main_window_->WindowHandle(), &layered_window_update_param);
+  if (result == 0) {
+    debug_stream << TEXT("failed to update main window GetLastError() is ") << GetLastError() << endl;
+    assert(false);
+  }
+  SelectObject(paint_dc, old_bitmap);
+  DeleteObject(bitmap);
+  DeleteDC(paint_dc);
   OutputDebugStringW(debug_stream.str().c_str());
   EndPaint(main_window_->WindowHandle(), &paint_structure);
   return make_pair(true, 0);

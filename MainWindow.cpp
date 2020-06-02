@@ -124,10 +124,10 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
   unique_ptr<WCHAR[]> buffer_of_class_name = WStringToStringBuffer(Utf8StringToWString(kMainWindowClass));
   unique_ptr<WCHAR[]> buffer_of_window_name = WStringToStringBuffer(Utf8StringToWString(window_name));
   window_handle_ = CreateWindowExW(
-    WS_EX_LAYERED, //WS_EX_APPWINDOW,
+    WS_EX_LAYERED,
     buffer_of_class_name.get(),
     buffer_of_window_name.get(),
-    0, // WS_OVERLAPPEDWINDOW,
+    WS_VISIBLE,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
@@ -157,16 +157,6 @@ void MainWindow::Show(int show_flags)
   ShowWindow(window_handle_, show_flags);
 }
 
-HWND MainWindow::WindowHandle() const
-{
-  return window_handle_;
-}
-
-MSG MainWindow::LastMessage() const
-{
-  return last_message_;
-}
-
 pair<bool, LRESULT> MainWindow::Trigger(UINT msg, WPARAM w_param, LPARAM l_param)
 {
   unordered_map<UINT, signal<pair<bool, LRESULT>, UINT, WPARAM, LPARAM>>::iterator it = signals_.find(msg);
@@ -178,12 +168,45 @@ pair<bool, LRESULT> MainWindow::Trigger(UINT msg, WPARAM w_param, LPARAM l_param
   return make_pair<bool, LRESULT>(false, 0);
 }
 
+void MainWindow::InvalidRect(const RECT& rect, BOOL erase) {
+  if (!IsWindow(WindowHandle())) {
+    assert(false);
+    return;
+  }
+  ::InvalidateRect(WindowHandle(), &rect, erase);
+}
+
+void MainWindow::InvalidRect(BOOL erase) {
+  if (!IsWindow(WindowHandle())) {
+    assert(false);
+    return;
+  }
+  ::InvalidateRect(WindowHandle(), NULL, erase);
+}
+
 RECT MainWindow::ClientRectangle() const
 {
   RECT result;
   BOOL succeeded = GetClientRect(window_handle_, &result);
   assert(succeeded);
   return result;
+}
+
+RECT MainWindow::WindowRectangle() const {
+  RECT result;
+  BOOL succeeded = GetWindowRect(window_handle_, &result);
+  assert(succeeded);
+  return result;
+}
+
+HWND MainWindow::WindowHandle() const
+{
+  return window_handle_;
+}
+
+MSG MainWindow::LastMessage() const
+{
+  return last_message_;
 }
 
 connection MainWindow::Connect(UINT msg, function<pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handle)
