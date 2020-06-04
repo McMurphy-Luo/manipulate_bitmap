@@ -122,22 +122,12 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   }
   PAINTSTRUCT paint_structure;
   HDC window_dc = BeginPaint(main_window_->WindowHandle(), &paint_structure);
-  basic_stringstream<TCHAR> debug_stream;
-  debug_stream << TEXT("paint_structure.fErase ") << paint_structure.fErase
-    << TEXT(" paint_structure.rcPaint ") << paint_structure.rcPaint.left
-    << TEXT(" ") << paint_structure.rcPaint.top
-    << TEXT(" ") << paint_structure.rcPaint.right
-    << TEXT(" ") << paint_structure.rcPaint.bottom
-    << endl;
   HDC paint_dc = CreateCompatibleDC(window_dc);
   OutputDeviceCapabilities(window_dc);
   OutputDeviceCapabilities(paint_dc);
   RECT window_rect = main_window_->WindowRectangle();
   LONG window_width = window_rect.right - window_rect.left;
   LONG window_height = window_rect.bottom - window_rect.top;
-  RECT client_rect = main_window_->ClientRectangle();
-  LONG client_width = client_rect.right - client_rect.left;
-  LONG client_height = client_rect.bottom - client_rect.top;
   BITMAPINFO bitmap_info;
   bitmap_info.bmiHeader.biSize = sizeof(bitmap_info);
   bitmap_info.bmiHeader.biWidth = window_width;
@@ -150,9 +140,9 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   bitmap_info.bmiHeader.biYPelsPerMeter = 0;
   bitmap_info.bmiHeader.biClrUsed = 0;
   bitmap_info.bmiHeader.biClrImportant = 0;
-  
   BYTE* pointer_to_pixels = NULL;
   HBITMAP bitmap = CreateDIBSection(paint_dc, &bitmap_info, DIB_RGB_COLORS, (void**)&pointer_to_pixels, NULL, 0);
+  basic_stringstream<TCHAR> debug_stream;
   {
     Bitmap bitmap(
       &bitmap_info,
@@ -201,7 +191,7 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   layered_window_update_param.psize = &size_of_window;
   layered_window_update_param.hdcSrc = paint_dc;
   layered_window_update_param.pptSrc = &zero;
-  layered_window_update_param.crKey = RGB(0xFF, 0xFF, 0xFF);
+  layered_window_update_param.crKey = RGB(0xF0, 0xF0, 0xF0);
   layered_window_update_param.pblend = &blend_function;
   layered_window_update_param.dwFlags = ULW_ALPHA | ULW_EX_NORESIZE;
   layered_window_update_param.prcDirty = NULL;
@@ -213,6 +203,12 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   SelectObject(paint_dc, old_bitmap);
   DeleteObject(bitmap);
   DeleteDC(paint_dc);
+  debug_stream << TEXT("paint_structure.fErase ") << paint_structure.fErase
+    << TEXT(" paint_structure.rcPaint ") << paint_structure.rcPaint.left
+    << TEXT(" ") << paint_structure.rcPaint.top
+    << TEXT(" ") << paint_structure.rcPaint.right
+    << TEXT(" ") << paint_structure.rcPaint.bottom
+    << endl;
   OutputDebugStringW(debug_stream.str().c_str());
   EndPaint(main_window_->WindowHandle(), &paint_structure);
   return make_pair(true, 0);

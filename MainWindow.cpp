@@ -127,7 +127,7 @@ MainWindow::MainWindow(const Utf8String& window_name, HINSTANCE module_handle)
     WS_EX_LAYERED,
     buffer_of_class_name.get(),
     buffer_of_window_name.get(),
-    WS_VISIBLE,
+    WS_POPUP | WS_VISIBLE,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
     CW_USEDEFAULT,

@@ -30,8 +30,8 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
   assert(gdiplus_initialize_status == Status::Ok);
   shared_ptr<MainWindow> the_main_window(make_shared<MainWindow>("Hello World", instance));
   shared_ptr<MainWindowView> the_main_window_view(make_shared<MainWindowView>(the_main_window));
+  ::SetWindowPos(the_main_window->WindowHandle(), 0, 200, 200, 100, 100, SWP_NOZORDER);
   the_main_window_view->InvalidRect(FALSE);
-  BOOL is_window = IsWindow(NULL);
   MSG message;
   while (GetMessage(&message, nullptr, 0, 0)) {
     TranslateMessage(&message);
