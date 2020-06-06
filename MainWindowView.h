@@ -34,7 +34,7 @@ private:
 
 private:
   std::shared_ptr<MainWindow> main_window_;
-  std::pair<bool, RoundRectanglePathParam> param_param_;
+  std::pair<bool, RoundRectanglePathParam> round_rectangle_param_;
   Gdiplus::GraphicsPath window_bound_path_;
   signals::connection conn_of_paint_event_;
   signals::connection conn_of_nc_hit_test_event_;

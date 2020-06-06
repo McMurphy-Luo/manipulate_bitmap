@@ -20,7 +20,10 @@ using Gdiplus::Graphics;
 using Gdiplus::GraphicsPath;
 using Gdiplus::FillMode;
 using Gdiplus::Status;
+using Gdiplus::SolidBrush;
+using Gdiplus::SmoothingMode;
 using Gdiplus::Pen;
+using Gdiplus::Point;
 using Gdiplus::Rect;
 using Gdiplus::Color;
 using Gdiplus::Bitmap;
@@ -96,7 +99,7 @@ namespace
 
 MainWindowView::MainWindowView(shared_ptr<MainWindow> the_main_window)
   : main_window_(the_main_window)
-  , param_param_()
+  , round_rectangle_param_(false, RoundRectanglePathParam())
   , window_bound_path_(FillMode::FillModeAlternate)
   , conn_of_paint_event_(
     the_main_window->Connect(
@@ -149,6 +152,8 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   RECT window_rect = main_window_->WindowRectangle();
   LONG window_width = window_rect.right - window_rect.left;
   LONG window_height = window_rect.bottom - window_rect.top;
+  LONG drawable_area_width = window_width - 1;
+  LONG drawable_area_height = window_height - 1;
   BITMAPINFO bitmap_info;
   bitmap_info.bmiHeader.biSize = sizeof(bitmap_info);
   bitmap_info.bmiHeader.biWidth = window_width;
@@ -169,23 +174,34 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
       pointer_to_pixels
     );
     Graphics graphics(&bitmap);
+    graphics.SetSmoothingMode(SmoothingMode::SmoothingModeAntiAlias);
     Status gdiplus_function_status = graphics.GetLastStatus();
     if (gdiplus_function_status != Status::Ok) {
       debug_stream << TEXT("failed to create the graphics object status is ") << gdiplus_function_status << endl;
       assert(false);
     }
-    Color bg_color(Color(0xFF, 0xFF, 0xFF));
-    graphics.Clear(bg_color);
-    Pen solid_color_pen(Color(0x23, 0x23, 0x23), 20);
-    Rect client_rect(
-      0,
-      0,
-      window_width,
-      window_height
-    );
-    gdiplus_function_status = graphics.DrawRectangle(&solid_color_pen, client_rect);
+    InitializeBoundPath(drawable_area_width, drawable_area_height, 20);
+    Pen solid_color_pen(Color(0x77, 0x23, 0x23, 0x23), 1);
+    gdiplus_function_status = solid_color_pen.GetLastStatus();
     if (gdiplus_function_status != Status::Ok) {
-      debug_stream << TEXT("failed to draw rectangle status is ") << gdiplus_function_status << endl;
+      debug_stream << TEXT("failed to create the solid_color_pen object status is ") << gdiplus_function_status << endl;
+      assert(false);
+    }
+    gdiplus_function_status = graphics.DrawPath(&solid_color_pen, &window_bound_path_);
+    if (gdiplus_function_status != Status::Ok) {
+      debug_stream << TEXT("failed to DrawPath status is ") << gdiplus_function_status << endl;
+      assert(false);
+    }
+    Color bg_color(Color(0xFF, 0xFF, 0xFF));
+    SolidBrush brush(bg_color);
+    gdiplus_function_status = brush.GetLastStatus();
+    if (gdiplus_function_status != Status::Ok) {
+      debug_stream << TEXT("failed to create the brush object status is ") << gdiplus_function_status << endl;
+      assert(false);
+    }
+    gdiplus_function_status = graphics.FillPath(&brush, &window_bound_path_);
+    if (gdiplus_function_status != Status::Ok) {
+      debug_stream << TEXT("failed to FillPath status is ") << gdiplus_function_status << endl;
       assert(false);
     }
   }
@@ -243,5 +259,123 @@ pair<bool, LRESULT> MainWindowView::OnNcHitTest(UINT msg, WPARAM w_param, LPARAM
 }
 
 void MainWindowView::InitializeBoundPath(LONG width, LONG height, REAL radius) {
-
+  if (
+    round_rectangle_param_.first
+    && 
+    width == round_rectangle_param_.second.width
+    &&
+    height == round_rectangle_param_.second.height
+    &&
+    radius == round_rectangle_param_.second.radius
+  ) {
+    return;
+  }
+  Status status = window_bound_path_.Reset();
+  basic_stringstream<TCHAR> debug_stream;
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to Reset() the window_bound_path_ status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.StartFigure();
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to StartFigure() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddLine(
+    static_cast<INT>(0),
+    static_cast<INT>(height - radius),
+    static_cast<INT>(0),
+    static_cast<INT>(radius)
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddLine() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddArc(
+    static_cast<INT>(0),
+    static_cast<INT>(0),
+    static_cast<INT>(radius * 2),
+    static_cast<INT>(radius * 2),
+    180,
+    90
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddArc() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddLine(
+    static_cast<INT>(radius),
+    static_cast<INT>(0),
+    static_cast<INT>(width - radius),
+    static_cast<INT>(0)
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddLine() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddArc(
+    static_cast<INT>(width - radius * 2),
+    static_cast<INT>(0),
+    static_cast<INT>(radius * 2),
+    static_cast<INT>(radius * 2),
+    270,
+    90
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddArc() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddLine(
+    static_cast<INT>(width),
+    static_cast<INT>(radius),
+    static_cast<INT>(width),
+    static_cast<INT>(height - radius)
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddLine() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddArc(
+    static_cast<INT>(width - 2 * radius),
+    static_cast<INT>(height - 2 * radius),
+    static_cast<INT>(radius * 2),
+    static_cast<INT>(radius * 2),
+    0,
+    90
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddArc() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddLine(
+    static_cast<INT>(width - radius),
+    static_cast<INT>(height),
+    static_cast<INT>(radius),
+    static_cast<INT>(height)
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddLine() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.AddArc(
+    static_cast<INT>(0),
+    static_cast<INT>(height - 2 * radius),
+    static_cast<INT>(radius * 2),
+    static_cast<INT>(radius * 2),
+    90,
+    90
+  );
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to AddArc() status is ") << status << endl;
+    assert(false);
+  }
+  status = window_bound_path_.CloseFigure();
+  if (status != Status::Ok) {
+    debug_stream << TEXT("failed to CloseFigure() status is ") << status << endl;
+    assert(false);
+  }
+  round_rectangle_param_.first = true;
+  round_rectangle_param_.second.width = width;
+  round_rectangle_param_.second.height = height;
+  round_rectangle_param_.second.radius = radius;
 }
