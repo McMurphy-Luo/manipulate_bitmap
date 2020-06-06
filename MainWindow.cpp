@@ -89,7 +89,7 @@ namespace
     WindowMessageSlotTriggerPolicy(UINT message, WPARAM w_param, LPARAM l_param)
       : message_(message)
       , w_param_(w_param)
-      , l_param_()
+      , l_param_(l_param)
       , handled_(false)
       , result_(0) {
 

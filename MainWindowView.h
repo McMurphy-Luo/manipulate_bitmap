@@ -4,7 +4,14 @@
 #include <memory>
 #include <utility>
 #include "Windows.h"
+#include "gdiplus.h"
 #include "MainWindow.h"
+
+struct RoundRectanglePathParam {
+  LONG width;
+  LONG height;
+  Gdiplus::REAL radius;
+};
 
 class MainWindowView {
 public:
@@ -20,9 +27,17 @@ public:
 
   std::pair<bool, LRESULT> OnPaint(UINT msg, WPARAM w_param, LPARAM l_param);
 
+  std::pair<bool, LRESULT> OnNcHitTest(UINT msg, WPARAM w_param, LPARAM l_param);
+
+private:
+  void InitializeBoundPath(LONG width, LONG height, Gdiplus::REAL radius);
+
 private:
   std::shared_ptr<MainWindow> main_window_;
+  std::pair<bool, RoundRectanglePathParam> param_param_;
+  Gdiplus::GraphicsPath window_bound_path_;
   signals::connection conn_of_paint_event_;
+  signals::connection conn_of_nc_hit_test_event_;
 };
 
 #endif // MANIPULATE_BITMAP_MAIN_WINDOW_VIEW_H_

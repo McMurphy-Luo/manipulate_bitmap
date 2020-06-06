@@ -1,6 +1,7 @@
 #include "MainWindowView.h"
 #include <memory>
 #include <sstream>
+#include "Windowsx.h"
 #include "gdiplus.h"
 
 using std::pair;
@@ -14,7 +15,10 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 using std::placeholders::_3;
 using std::endl;
+using Gdiplus::REAL;
 using Gdiplus::Graphics;
+using Gdiplus::GraphicsPath;
+using Gdiplus::FillMode;
 using Gdiplus::Status;
 using Gdiplus::Pen;
 using Gdiplus::Rect;
@@ -91,11 +95,21 @@ namespace
 }
 
 MainWindowView::MainWindowView(shared_ptr<MainWindow> the_main_window)
-  : main_window_(the_main_window) 
-  , conn_of_paint_event_(the_main_window->Connect(
-    WM_PAINT,
-    bind(mem_fn(&MainWindowView::OnPaint), this, _1, _2, _3)
-  ))
+  : main_window_(the_main_window)
+  , param_param_()
+  , window_bound_path_(FillMode::FillModeAlternate)
+  , conn_of_paint_event_(
+    the_main_window->Connect(
+      WM_PAINT,
+      bind(mem_fn(&MainWindowView::OnPaint), this, _1, _2, _3)
+    )
+  )
+  , conn_of_nc_hit_test_event_(
+    the_main_window->Connect(
+      WM_NCHITTEST,
+      bind(mem_fn(&MainWindowView::OnNcHitTest), this, _1, _2, _3)
+    )
+  )
 {
 
 }
@@ -118,10 +132,17 @@ void MainWindowView::InvalidRect(BOOL erase) {
 
 pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_param) {
   if (!main_window_) {
-    return make_pair(true, 0);;
+    return make_pair(false, 0);;
   }
   PAINTSTRUCT paint_structure;
   HDC window_dc = BeginPaint(main_window_->WindowHandle(), &paint_structure);
+  basic_stringstream<TCHAR> debug_stream;
+  debug_stream << TEXT("paint_structure.fErase ") << paint_structure.fErase
+    << TEXT(" paint_structure.rcPaint ") << paint_structure.rcPaint.left
+    << TEXT(" ") << paint_structure.rcPaint.top
+    << TEXT(" ") << paint_structure.rcPaint.right
+    << TEXT(" ") << paint_structure.rcPaint.bottom
+    << endl;
   HDC paint_dc = CreateCompatibleDC(window_dc);
   OutputDeviceCapabilities(window_dc);
   OutputDeviceCapabilities(paint_dc);
@@ -142,7 +163,6 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   bitmap_info.bmiHeader.biClrImportant = 0;
   BYTE* pointer_to_pixels = NULL;
   HBITMAP bitmap = CreateDIBSection(paint_dc, &bitmap_info, DIB_RGB_COLORS, (void**)&pointer_to_pixels, NULL, 0);
-  basic_stringstream<TCHAR> debug_stream;
   {
     Bitmap bitmap(
       &bitmap_info,
@@ -170,7 +190,6 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
     }
   }
   HGDIOBJ old_bitmap = SelectObject(paint_dc, bitmap);
-  UPDATELAYEREDWINDOWINFO layered_window_update_param;
   BLENDFUNCTION blend_function;
   blend_function.BlendOp = AC_SRC_OVER;
   blend_function.BlendFlags = 0;
@@ -185,6 +204,7 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   POINT zero;
   zero.x = 0;
   zero.y = 0;
+  UPDATELAYEREDWINDOWINFO layered_window_update_param;
   layered_window_update_param.cbSize = sizeof(layered_window_update_param);
   layered_window_update_param.hdcDst = window_dc;
   layered_window_update_param.pptDst = NULL;
@@ -203,13 +223,25 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
   SelectObject(paint_dc, old_bitmap);
   DeleteObject(bitmap);
   DeleteDC(paint_dc);
-  debug_stream << TEXT("paint_structure.fErase ") << paint_structure.fErase
-    << TEXT(" paint_structure.rcPaint ") << paint_structure.rcPaint.left
-    << TEXT(" ") << paint_structure.rcPaint.top
-    << TEXT(" ") << paint_structure.rcPaint.right
-    << TEXT(" ") << paint_structure.rcPaint.bottom
-    << endl;
   OutputDebugStringW(debug_stream.str().c_str());
   EndPaint(main_window_->WindowHandle(), &paint_structure);
   return make_pair(true, 0);
+}
+
+pair<bool, LRESULT> MainWindowView::OnNcHitTest(UINT msg, WPARAM w_param, LPARAM l_param) {
+  if (!main_window_) {
+    return make_pair(false, 0);
+  }
+  RECT window_rect = main_window_->WindowRectangle();
+  POINT pt;
+  pt.x = GET_X_LPARAM(l_param);
+  pt.y = GET_Y_LPARAM(l_param);
+  if (PtInRect(&window_rect, pt)) {
+    return make_pair(true, HTCAPTION);
+  }
+  return make_pair(false, 0);
+}
+
+void MainWindowView::InitializeBoundPath(LONG width, LONG height, REAL radius) {
+
 }
