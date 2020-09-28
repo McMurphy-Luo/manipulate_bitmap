@@ -41,5 +41,5 @@ int APIENTRY _tWinMain(HINSTANCE instance, HINSTANCE previous_instance, LPTSTR c
   the_main_window.reset();
   GdiplusShutdown(gdi_plus_token);
   CoUninitialize();
-	return 0;
+  return 0;
 }

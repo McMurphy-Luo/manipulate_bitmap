@@ -186,7 +186,7 @@ namespace signals
 
     }
 
-    signal& operator=(signal&& another)  noexcept {
+    signal& operator=(signal&& another) {
       signal_detail_ = std::move(another.signal_detail_);
     }
 
