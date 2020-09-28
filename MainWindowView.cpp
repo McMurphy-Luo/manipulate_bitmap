@@ -113,6 +113,12 @@ MainWindowView::MainWindowView(shared_ptr<MainWindow> the_main_window)
       bind(mem_fn(&MainWindowView::OnNcHitTest), this, _1, _2, _3)
     )
   )
+  , conn_of_char_event_(
+    the_main_window->Connect(
+      WM_CHAR,
+      bind(mem_fn(&MainWindowView::OnChar), this, _1, _2, _3)
+    )
+  )
 {
 
 }
@@ -135,6 +141,7 @@ void MainWindowView::InvalidRect(BOOL erase) {
 
 pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_param) {
   if (!main_window_) {
+    assert(false);
     return make_pair(false, 0);;
   }
   PAINTSTRUCT paint_structure;
@@ -246,6 +253,7 @@ pair<bool, LRESULT> MainWindowView::OnPaint(UINT msg, WPARAM w_param, LPARAM l_p
 
 pair<bool, LRESULT> MainWindowView::OnNcHitTest(UINT msg, WPARAM w_param, LPARAM l_param) {
   if (!main_window_) {
+    assert(false);
     return make_pair(false, 0);
   }
   RECT window_rect = main_window_->WindowRectangle();
@@ -254,6 +262,17 @@ pair<bool, LRESULT> MainWindowView::OnNcHitTest(UINT msg, WPARAM w_param, LPARAM
   pt.y = GET_Y_LPARAM(l_param);
   if (PtInRect(&window_rect, pt)) {
     return make_pair(true, HTCAPTION);
+  }
+  return make_pair(false, 0);
+}
+
+std::pair<bool, LRESULT> MainWindowView::OnChar(UINT msg, WPARAM w_param, LPARAM l_param) {
+  if (!main_window_) {
+    assert(false);
+    return make_pair(false, 0);
+  }
+  if (w_param == 0x1B) {  // ESC key
+    main_window_->PostMessage(WM_CLOSE, 0, 0);
   }
   return make_pair(false, 0);
 }

@@ -29,6 +29,8 @@ public:
 
   std::pair<bool, LRESULT> OnNcHitTest(UINT msg, WPARAM w_param, LPARAM l_param);
 
+  std::pair<bool, LRESULT> OnChar(UINT msg, WPARAM w_param, LPARAM l_param);
+
 private:
   void InitializeBoundPath(LONG width, LONG height, Gdiplus::REAL radius);
 
@@ -38,6 +40,7 @@ private:
   Gdiplus::GraphicsPath window_bound_path_;
   signals::connection conn_of_paint_event_;
   signals::connection conn_of_nc_hit_test_event_;
+  signals::connection conn_of_char_event_;
 };
 
 #endif // MANIPULATE_BITMAP_MAIN_WINDOW_VIEW_H_

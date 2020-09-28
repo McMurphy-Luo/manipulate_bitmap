@@ -9,9 +9,11 @@
 
 const char* const kShadowWindowClass = u8"ShadowWindow.McMurphy.Luo";
 
+class MainWindow;
+
 class ShadowWindow {
 public:
-  ShadowWindow(const Utf8String& window_name, HINSTANCE module_handle);
+  ShadowWindow(const Utf8String& window_name, HINSTANCE module_handle, std::shared_ptr<MainWindow> main_window);
 
   ~ShadowWindow();
 
@@ -24,6 +26,7 @@ public:
 private:
   HWND window_handle_;
   std::unordered_map<UINT, signals::signal<std::pair<bool, LRESULT>, UINT, WPARAM, LPARAM>> signals_;
+  std::shared_ptr<MainWindow> main_window_;
 };
 
 #endif //MANIPULATE_BITMAP_SHADOW_WINDOW_H_

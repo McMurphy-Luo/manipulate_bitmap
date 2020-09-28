@@ -209,6 +209,10 @@ MSG MainWindow::LastMessage() const
   return last_message_;
 }
 
+bool MainWindow::PostMessage(UINT msg, WPARAM w_param, LPARAM l_param) {
+  return !!::PostMessage(window_handle_, msg, w_param, l_param);
+}
+
 connection MainWindow::Connect(UINT msg, function<pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handle)
 {
   unordered_map<UINT, signal<pair<bool, LRESULT>, UINT, WPARAM, LPARAM>>::iterator it = signals_.find(msg);

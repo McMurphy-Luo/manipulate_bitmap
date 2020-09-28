@@ -23,11 +23,6 @@ namespace
       SetWindowLongPtrW(window_handle, GWLP_USERDATA, (LONG_PTR)p_created_wnd);
       return 0;
     }
-    case WM_DESTROY:
-    {
-      PostQuitMessage(0);
-      return 0;
-    }
     }
     ShadowWindow* theWindow = reinterpret_cast<ShadowWindow*>(GetWindowLongPtrW(window_handle, GWLP_USERDATA));
     if (theWindow) {
@@ -110,8 +105,10 @@ namespace
   };
 }
 
-ShadowWindow::ShadowWindow(const Utf8String& window_name, HINSTANCE module_handle)
-  : window_handle_(NULL) {
+ShadowWindow::ShadowWindow(const Utf8String& window_name, HINSTANCE module_handle, std::shared_ptr<MainWindow> main_window)
+  : window_handle_(NULL)
+  , signals_()
+  , main_window_(main_window) {
   RegisterShadowWindowClass(module_handle);
   unique_ptr<WCHAR[]> buffer_of_class_name = WStringToStringBuffer(Utf8StringToWString(kShadowWindowClass));
   unique_ptr<WCHAR[]> buffer_of_window_name = WStringToStringBuffer(Utf8StringToWString(window_name));

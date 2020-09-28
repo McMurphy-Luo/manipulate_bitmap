@@ -34,6 +34,8 @@ public:
 
   MSG LastMessage() const;
 
+  bool PostMessage(UINT msg, WPARAM wParam, LPARAM lParam);
+
   std::pair<bool, LRESULT> Trigger(UINT msg, WPARAM w_param, LPARAM l_param);
 
   signals::connection Connect(UINT msg, std::function<std::pair<bool, LRESULT>(UINT, WPARAM, LPARAM)> handle);
